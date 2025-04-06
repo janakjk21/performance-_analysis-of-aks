@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Button, Container, Row, Col } from 'react-bootstrap';
+import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -9,15 +9,60 @@ const Register = () => {
         confirmPassword: '',
     });
 
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Add form submission logic here
-        console.log('Form submitted:', formData);
+
+        // Validate form data
+        if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+            setError('Please fill in all fields');
+            setSuccess('');
+            return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match');
+            setSuccess('');
+            return;
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: formData.username,
+                    email: formData.email,
+                    password: formData.password,
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.detail || 'Registration failed');
+            }
+
+            setError('');
+            setSuccess('Registration successful! You can now log in.');
+            setFormData({
+                username: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+            });
+        } catch (err) {
+            setError(err.message);
+            setSuccess('');
+        }
     };
 
     return (
@@ -25,6 +70,8 @@ const Register = () => {
             <Row className="justify-content-md-center">
                 <Col md={6}>
                     <h2 className="text-center">Register</h2>
+                    {error && <Alert variant="danger">{error}</Alert>}
+                    {success && <Alert variant="success">{success}</Alert>}
                     <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="formUsername" className="mb-3">
                             <Form.Label>Username</Form.Label>
@@ -34,7 +81,6 @@ const Register = () => {
                                 name="username"
                                 value={formData.username}
                                 onChange={handleChange}
-                                required
                             />
                         </Form.Group>
 
@@ -46,7 +92,6 @@ const Register = () => {
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                required
                             />
                         </Form.Group>
 
@@ -54,11 +99,10 @@ const Register = () => {
                             <Form.Label>Password</Form.Label>
                             <Form.Control
                                 type="password"
-                                placeholder="Password"
+                                placeholder="Enter password"
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                required
                             />
                         </Form.Group>
 
@@ -66,15 +110,14 @@ const Register = () => {
                             <Form.Label>Confirm Password</Form.Label>
                             <Form.Control
                                 type="password"
-                                placeholder="Confirm Password"
+                                placeholder="Confirm password"
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
-                                required
                             />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit" className="w-100">
+                        <Button variant="primary" type="submit">
                             Register
                         </Button>
                     </Form>

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String
-from database.db import Base
+from sqlalchemy.orm import relationship
+from database.db import Base  # Import Base from your database module
 
 class User(Base):
     __tablename__ = "users"
@@ -8,3 +9,5 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+
+    history = relationship("History", back_populates="user")
