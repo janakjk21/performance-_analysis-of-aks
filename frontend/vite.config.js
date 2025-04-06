@@ -1,18 +1,39 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
-    allowedHosts: true,
+    host: true, // Allows the server to be accessible externally
+    allowedHosts: true, // Allows all hosts to connect
     proxy: {
-      '/search_images': 'http://127.0.0.1:3000',
-      '/contacts': 'http://127.0.0.1:3000',
-      '/create_contact': 'http://127.0.0.1:3000',
-      '/update_contact': 'http://127.0.0.1:3000',
-      '/delete_contact': 'http://127.0.0.1:3000'
-    }
+      // Proxy API requests to the backend server
+      '/search_images': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/contacts': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/create_contact': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/update_contact': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/delete_contact': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
-})
+});
