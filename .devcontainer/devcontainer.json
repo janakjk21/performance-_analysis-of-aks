@@ -1,16 +1,13 @@
 {
-  "name": "Basic Web Application",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "frontend",
-
-  // "image": "mcr.microsoft.com/devcontainers/python:3.10",
-  // "settings": {
-  //   "terminal.integrated.shell.linux": "/bin/bash"
-  // },
-  // "dockerComposeFile": "docker-compose.yml",
-  // "service": "app",
+  "name": "Full Stack Dev Container",
+  "dockerComposeFile": "../docker-compose.yml", // Reference the docker-compose file
+  "service": "frontend", // Default service to open in the container
   "workspaceFolder": "/workspace",
-  "forwardPorts": [3000, 5173],
+  "forwardPorts": [
+    3000,
+    5173,
+    8000
+  ], // Forward frontend (3000, 5173) and backend (8000) ports
   "customizations": {
     "vscode": {
       "extensions": [
@@ -18,14 +15,10 @@
         "ms-python.vscode-pylance",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode"
-      ],
-      "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true
-      }
+      ]
     }
   },
-  // "postCreateCommand": "pip install -r requirements.txt && cd frontend && npm install",
-  // "remoteUser": "vscode"
+  "remoteEnv": {
+    "PYTHONPATH": "/workspace/backend" // Set PYTHONPATH for backend
+  }
 }
