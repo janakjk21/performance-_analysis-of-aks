@@ -1,82 +1,204 @@
-This is a simple full-stack web application composed of a backend and a frontend. It utilizes Flask for the backend API and ReactJS for the frontend interface.
 
-# Instructions to launch application on INB labs' PCs
+# 📘 AI-Powered Cloud API – End-User and Developer Documentation
 
-## 1. Clone the repository
+## 📌 1. Project Overview
 
-Open a Terminal, the launch the following commands:
+**Title:** AI-Powered Cloud Service API  
+**Module:** CMP9785M Cloud Development  
+**Technology Stack:** FastAPI (Python), PostgreSQL, JWT, Docker, [Frontend: React/HTML+JS], Third-party AI API  
+**Purpose:**  
+To provide a secure, scalable, AI-enhanced backend API that enables users to submit jobs to an external AI service (e.g., image generation, summarization, translation, etc.), with account management, credit-based access, job queueing, and notifications.
 
-```Bash
-git clone https://github.com/francescodelduchetto/CMP9134-2425-basicWebApp
+## 🔐 2. Authentication & Authorization
+
+### ➤ Sign Up
+- **Endpoint:** `POST /signup`
+- **Payload:**
+  ```json
+  {
+    "username": "your_name",
+    "password": "your_password"
+  }
+  ```
+- **Returns:** JWT access token on success
+
+### ➤ Login
+- **Endpoint:** `POST /login`
+- **Payload:**
+  ```json
+  {
+    "username": "your_name",
+    "password": "your_password"
+  }
+  ```
+- **Returns:** JWT token to be used in `Authorization: Bearer <token>` header
+
+### ➤ Token Usage
+All protected endpoints require an `Authorization` header with the bearer token. Tokens expire in 30 minutes.
+
+## 👤 3. User Profile & Credits
+
+### ➤ View Account
+- **Endpoint:** `GET /me`
+- **Returns:** User details and current credit balance
+
+### ➤ Check Credits
+- **Endpoint:** `GET /me/credits`
+- **Returns:**
+  ```json
+  {
+    "credits": 10
+  }
+  ```
+
+### ➤ Credit Policy
+- 1 job = 1 credit  
+- Users start with 10 credits  
+- Submissions without sufficient credits are rejected
+
+## 📝 4. Job Submission
+
+### ➤ Submit a Job
+- **Endpoint:** `POST /jobs/submit`
+- **Payload (example for text summarization):**
+  ```json
+  {
+    "task_type": "summarize",
+    "input_data": "This is a long paragraph that needs to be summarized."
+  }
+  ```
+- **Behavior:**  
+  - Deducts 1 credit  
+  - Queues job for background processing  
+  - Returns job ID
+
+### ➤ Check Job Status
+- **Endpoint:** `GET /jobs/{job_id}/status`
+- **Returns:**
+  ```json
+  {
+    "status": "completed",
+    "output": "Short summary."
+  }
+  ```
+
+### ➤ Job Status Values
+- `queued`
+- `in_progress`
+- `completed`
+- `failed`
+
+## 🤖 5. External AI Integration
+
+### ➤ Example Service: OpenAI API (GPT or DALL·E)
+
+- Secure connection via API key (`.env`)
+- Input is processed through selected AI model
+- Response is stored in the job record and returned on status check
+
+## 🔔 6. Notification System
+
+- **Polling-based updates:** Frontend checks for job status every few seconds
+- **Planned extension:** Webhook/email notifications (for future expansion)
+
+## 🧪 7. Testing Strategy
+
+### ➤ Unit Testing
+- All core functions (auth, credit logic, DB operations) tested with `pytest`
+
+### ➤ API Testing
+- Postman collection included
+- Tested:
+  - Auth flow
+  - Job submission and edge cases
+  - Invalid token handling
+
+### ➤ Functional Testing
+- Tested job queue with multiple users
+- Checked AI API call error handling
+- Monitored DB state after submissions
+
+### ➤ CI/CD Pipeline
+- **GitHub Actions** for:
+  - Linting
+  - Running tests
+  - Docker image build (if included)
+
+## 📦 8. Deployment Instructions
+
+### ➤ Local (Dev)
+```bash
+# Create virtualenv
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start dev server
+uvicorn app.main:app --reload
 ```
 
-## 2. Open Visual Studio Code Container
-
-1. Make sure that Docker is running on your computer. 
-2. Open VS Code.
-3. Click on the blue icon in the **bottom left corner of the visual studio window** 
-     <img width="59" alt="image" src="https://github.com/francescodelduchetto/RBT1001/assets/7307164/adc84af7-daa9-4470-a550-06e017a5cf2c">
-
-4. Select "Reopen in Container..."
-5. Locate the folder `CMP9134-2425-basicWebApp`, select it and click Open
-6. Wait until the setup is complete.
-
-**Your application should now be running and accessible at http://localhost:5173/**
-
-# ❗If you plan to work with this template on your personal computer, you need the following installation steps as prerequisite
-
-### Setup your environment
-
-1. Make sure you have Docker installed: https://docs.docker.com/engine/install/
-2. Make sure you have VSCode installed: https://code.visualstudio.com/download
-3. Make sure you have git installed: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-4. Make sure you have the `Docker` and the `Dev Containers` extension in VSCode installed and working: https://code.visualstudio.com/docs/containers/overview and https://code.visualstudio.com/docs/devcontainers/containers
-    * ensure docker is working, i.e. try `docker run --rm hello-world` and check it succeeds for your user
-
-
-# [OLD] Manual Installation ⬇️
-## 3. Install requirements
-:exclamation: The following commands needs to be launched from terminals inside VSCode (click Terminal > New Terminal).
-
-1. Install Python package requirements:
-     ```Bash
-     pip install -r requirements.txt
-     ```
-2. Install NodeJs and its requirements:
-     ```Bash
-     curl -sL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh
-     ```
-     ```Bash
-     sudo bash nodesource_setup.sh && sudo apt install -y nodejs
-     ```
-     ```Bash
-     cd frontend
-     ```
-     ```Bash
-     npm install
-     ```
-
-## 4. Launch backend
-Open a new VSCode Terminal and launch the following commands.
-
-```Bash
-cd ../backend
-```
-```Bash
-python main.py
+### ➤ Docker (Optional)
+```bash
+docker build -t ai-cloud-api .
+docker run -p 8000:8000 ai-cloud-api
 ```
 
-## 5. Launch frontend
-On a different terminal, launch:
-
-```Bash
-cd frontend
+### ➤ Environment Variables (.env)
 ```
-```Bash
-npm run dev
+DATABASE_URL=postgresql://user:password@localhost/dbname
+SECRET_KEY=supersecretkey
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+AI_API_KEY=your_key_here
 ```
-This will start the development server for the frontend, usually accessible at http://localhost:5173/.
 
-## CREDITS:
-Adapted from: [https://github.com/Pakheria/Basic-Web-Application](https://github.com/Pakheria/Basic-Web-Application)
+## 🧾 9. API Reference Summary
 
+| Endpoint               | Method | Auth Required | Description                          |
+|------------------------|--------|----------------|--------------------------------------|
+| `/signup`              | POST   | ❌             | Register new user                    |
+| `/login`               | POST   | ❌             | Get JWT token                        |
+| `/me`                  | GET    | ✅             | Get user profile                     |
+| `/me/credits`          | GET    | ✅             | View current credit balance          |
+| `/jobs/submit`         | POST   | ✅             | Submit job for processing            |
+| `/jobs/{id}/status`    | GET    | ✅             | Get status and result of a job       |
+| `/docs`                | GET    | ❌             | Swagger UI documentation             |
+| `/redoc`               | GET    | ❌             | ReDoc formatted documentation        |
+
+## 📹 10. Demo Video
+
+- **Link:** [YouTube or Panopto URL]
+- **Overview:**
+  - User registration/login
+  - Submit AI job
+  - Monitor job status
+  - Show credits in action
+  - Preview Swagger docs
+
+## 📂 11. Repository & Source Links
+
+- **GitHub Repository:** [GitHub URL]
+- **Source Code Structure:**
+  ```
+  app/
+    ├── main.py
+    ├── models/
+    ├── schemas/
+    ├── api/
+    ├── core/
+    ├── services/
+  client/
+    ├── index.html / react app
+  tests/
+    ├── test_auth.py
+    ├── test_jobs.py
+  ```
+
+## 🔁 12. Future Improvements
+
+- Webhook notifications or email alerts
+- Admin panel for credit management
+- More AI task types (e.g., image generation, translation)
+- Performance scaling with cloud deployment

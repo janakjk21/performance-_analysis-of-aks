@@ -18,8 +18,7 @@ function App() {
         <Route path="/create" element={<ContactForm />} />
         <Route path="/search-images" element={<ImageSearch />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+        <Route path="/register" element={<Register />} />      </Routes>
     </Router>
   );
 }
