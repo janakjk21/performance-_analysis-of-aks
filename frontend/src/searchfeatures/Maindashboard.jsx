@@ -1,67 +1,71 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Form, Button, Card, ListGroup } from "react-bootstrap";
 
 const Maindashboard = () => {
     const [images, setImages] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
-    const [keyword, setKeyword] = useState("test"); // Default keyword
-    const [chatHistory, setChatHistory] = useState([]); // Chat history state
+    const [keyword, setKeyword] = useState("test");
+    const [chatHistory, setChatHistory] = useState([]);
+    const navigate = useNavigate();
 
-    // Fetch images from Openverse API
+    // Logout logic
+    const handleLogout = () => {
+        sessionStorage.removeItem("access_token");
+        navigate("/login");
+    };
+
+    // Fetch images from Openverse
     const fetchImages = async (query) => {
         try {
             const response = await fetch(`https://api.openverse.org/v1/images/?q=${query}`, {
                 headers: {
-                    Authorization: "Bearer <Openverse API token>", // Replace <Openverse API token> with your actual token
+                    Authorization: "Bearer <Openverse API token>", // Replace with your real token
                 },
             });
             const data = await response.json();
-            const validImages = data.results.filter((image) => image.url); // Filter out invalid URLs
-            console.log("Fetched images:", validImages);
-            setImages(validImages.slice(0, 20)); // Get the first 20 valid images
+            const validImages = data.results.filter((image) => image.url);
+            setImages(validImages.slice(0, 20));
         } catch (error) {
             console.error("Error fetching images:", error);
         }
     };
 
-    // Fetch chat history from the backend
+    // Fetch chat history
     const fetchHistory = async () => {
-        try {
-            const token = sessionStorage.getItem("access_token"); // Retrieve token from sessionStorage
-            if (!token) {
-                throw new Error("No access token found. Please log in again.");
-            }
+        const token = sessionStorage.getItem("access_token");
+        if (!token) {
+            navigate("/login");
+            return;
+        }
 
+        try {
             const response = await fetch("http://127.0.0.1:8000/history", {
-                method: "GET",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch history");
-            }
+            if (!response.ok) throw new Error("Failed to fetch history");
 
             const data = await response.json();
             setChatHistory(data.history.map((entry) => ({ id: entry.id, text: entry.text })));
         } catch (error) {
             console.error("Error fetching history:", error);
-            alert(error.message); // Show an alert to the user
+            alert(error.message);
         }
     };
 
-    // Post a new search query to the backend
+    // Post a new search to backend
     const postHistory = async (query) => {
-        try {
-            const token = sessionStorage.getItem("access_token"); // Retrieve token from sessionStorage
-            if (!token) {
-                alert("Session expired. Redirecting to login.");
-                window.location.href = "/login"; // Replace with your login route
-                return;
-            }
+        const token = sessionStorage.getItem("access_token");
+        if (!token) {
+            navigate("/login");
+            return;
+        }
 
+        try {
             const response = await fetch("http://127.0.0.1:8000/history", {
                 method: "POST",
                 headers: {
@@ -71,28 +75,24 @@ const Maindashboard = () => {
                 body: JSON.stringify({ text: query }),
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to save history");
-            }
+            if (!response.ok) throw new Error("Failed to save history");
 
-            // Refresh the history after posting
             fetchHistory();
         } catch (error) {
             console.error("Error saving history:", error);
-            alert(error.message); // Show an alert to the user
+            alert(error.message);
         }
     };
 
     // Delete a specific history entry
     const deleteHistory = async (id) => {
-        try {
-            const token = sessionStorage.getItem("access_token"); // Retrieve token from sessionStorage
-            if (!token) {
-                alert("Session expired. Redirecting to login.");
-                window.location.href = "/login"; // Replace with your login route
-                return;
-            }
+        const token = sessionStorage.getItem("access_token");
+        if (!token) {
+            navigate("/login");
+            return;
+        }
 
+        try {
             const response = await fetch(`http://127.0.0.1:8000/history/${id}`, {
                 method: "DELETE",
                 headers: {
@@ -101,39 +101,35 @@ const Maindashboard = () => {
                 },
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to delete history");
-            }
+            if (!response.ok) throw new Error("Failed to delete history");
 
-            // Refresh the history after deletion
             fetchHistory();
         } catch (error) {
             console.error("Error deleting history:", error);
-            alert(error.message); // Show an alert to the user
+            alert(error.message);
         }
     };
 
-    // Handle search button click
+    // Handle search
     const handleSearch = () => {
         if (searchQuery.trim() === "") return;
-
-        // Update the keyword and fetch images
         setKeyword(searchQuery);
         fetchImages(searchQuery);
-
-        // Post the search query to the backend
         postHistory(searchQuery);
-
-        // Clear the search input
         setSearchQuery("");
     };
 
-    // Fetch history on component mount
+    // On mount, check for token and fetch history
     useEffect(() => {
-        fetchHistory();
-    }, []);
+        const token = sessionStorage.getItem("access_token");
+        if (!token) {
+            navigate("/login");
+        } else {
+            fetchHistory();
+        }
+    }, [navigate]);
 
-    // Fetch images whenever the keyword changes
+    // On keyword change, fetch images
     useEffect(() => {
         fetchImages(keyword);
     }, [keyword]);
@@ -162,8 +158,14 @@ const Maindashboard = () => {
 
                 {/* Main Content */}
                 <Col xs={12} md={9}>
-                    <h1 className="text-center my-4">Image Gallery</h1>
-                    <Row className="mb-4">
+                    <div className="d-flex justify-content-between align-items-center mt-3">
+                        <h1>Image Gallery</h1>
+                        <Button variant="outline-danger" onClick={handleLogout}>
+                            Logout
+                        </Button>
+                    </div>
+
+                    <Row className="mb-4 mt-3">
                         <Col xs={12} md={8} className="mb-2">
                             <Form.Control
                                 type="text"

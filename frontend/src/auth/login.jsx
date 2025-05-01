@@ -1,44 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 
-const Login = () => {
+const Login = ({ setIsAuthenticated }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        // If already logged in, redirect to main dashboard
+        const session = localStorage.getItem("session_data");
+        if (session) {
+            const { expires_at } = JSON.parse(session);
+            if (new Date(expires_at) > new Date()) {
+                navigate("/");
+            }
+        }
+    }, [navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!email || !password) {
             setError("Please fill in all fields");
-        } else {
-            setError("");
+            return;
+        }
 
-            try {
-                // Simulate a login API call
-                const response = await fetch("http://127.0.0.1:8000/auth/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ email, password }),
-                });
+        try {
+            const response = await fetch("http://127.0.0.1:8000/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email, password }),
+            });
 
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.detail || "Login failed");
-                }
-
+            if (!response.ok) {
                 const data = await response.json();
-                console.log("Login successful:", data);
-
-                // Save the token in sessionStorage
-                sessionStorage.setItem("access_token", data.access_token);
-
-                // Redirect or perform further actions
-                alert("Login successful!");
-            } catch (err) {
-                setError(err.message);
+                throw new Error(data.detail || "Login failed");
             }
+
+            const data = await response.json();
+            const expirationTime = new Date();
+            expirationTime.setDate(expirationTime.getDate() + 30); // 30 days from now
+
+            const sessionData = {
+                access_token: data.access_token,
+                expires_at: expirationTime.toISOString(),
+            };
+            localStorage.setItem("session_data", JSON.stringify(sessionData));
+
+            setIsAuthenticated(true);
+            navigate("/"); // Redirect to dashboard
+        } catch (err) {
+            setError(err.message);
         }
     };
 
@@ -73,6 +88,11 @@ const Login = () => {
                             Login
                         </Button>
                     </Form>
+
+                    <div className="text-center mt-3">
+                        <span>Don't have an account? </span>
+                        <Link to="/register">Register here</Link>
+                    </div>
                 </Col>
             </Row>
         </Container>
