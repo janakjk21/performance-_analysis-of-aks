@@ -35,7 +35,6 @@ function App() {
   return (
     <Router>
       <Routes>
-<<<<<<< HEAD
         <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
         <Route path="/register" element={<Register setIsAuthenticated={setIsAuthenticated} />} />
         <Route
@@ -63,13 +62,6 @@ function App() {
           }
         />
       </Routes>
-=======
-        <Route path="/" element={<MainDashboard></MainDashboard>} />
-        <Route path="/create" element={<ContactForm />} />
-        <Route path="/search-images" element={<ImageSearch />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />      </Routes>
->>>>>>> 392a332fade61e5b9d46ac8d528050cdda86f0a1
     </Router>
   );
 }
