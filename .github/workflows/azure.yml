@@ -3,7 +3,7 @@ name: Azure Deployment
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - main
 
 jobs:
   build-and-deploy:
@@ -13,21 +13,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Log in to Azure Container Registry
+    - name: Log in to Azure Container Registry (ACR)
       uses: azure/docker-login@v1
       with:
-        login-server: <your-acr-name>.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
+        login-server: ronitacr20354.azurecr.io   # ✅ Replace with your real ACR login server
+        username: ${{ secrets.ACR_USERNAME }}    # ✅ Make sure this secret exists
+        password: ${{ secrets.ACR_PASSWORD }}    # ✅ Make sure this secret exists
 
-    - name: Build and push Docker image
+    - name: Build and push frontend image
       run: |
-        docker build -t <your-acr-name>.azurecr.io/fastapi-app:${{ github.sha }} .
-        docker push <your-acr-name>.azurecr.io/fastapi-app:${{ github.sha }}
+        docker build -t ronitacr20354.azurecr.io/frontend:latest ./frontend
+        docker push ronitacr20354.azurecr.io/frontend:latest
 
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: <your-app-service-name>
-        images: <your-acr-name>.azurecr.io/fastapi-app:${{ github.sha }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+    - name: Build and push backend image
+      run: |
+        docker build -t ronitacr20354.azurecr.io/backend:latest ./backend
+        docker push ronitacr20354.azurecr.io/backend:latest
+
+    - name: Deploy using docker-compose
+      run: |
+        az webapp config container set \
+          --name ${{ secrets.APP_NAME }} \
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --multicontainer-config-type compose \
+          --multicontainer-config-file docker-compose-azure.yml \
+          --docker-registry-server-url https://ronitacr20354.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
