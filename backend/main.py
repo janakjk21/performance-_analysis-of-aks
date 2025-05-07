@@ -1,23 +1,43 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from api.routes.auth import router as auth_router
-from api.routes.history import router as history_router
+name: Build and Deploy to Azure
 
-app = FastAPI()
+on:
+  push:
+    branches:
+      - main
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Replace with the frontend's origin
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
-)
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-# Include routers
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
-app.include_router(history_router, prefix="/history", tags=["history"])
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI app!"}
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Log in to Azure Container Registry (ACR)
+      run: az acr login --name ${{ secrets.ACR_NAME }}
+
+    - name: Build and Push Backend Docker Image
+      run: |
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest ./backend
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest
+
+    - name: Build and Push Frontend Docker Image
+      run: |
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest ./frontend
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest
+
+    - name: Deploy to Azure Web App
+      run: |
+        az webapp config container set \
+          --name ${{ secrets.APP_NAME }} \
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --multicontainer-config-type compose \
+          --multicontainer-config-file docker-compose-azure.yml \
+          --docker-registry-server-url https://${{ secrets.ACR_NAME }}.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}

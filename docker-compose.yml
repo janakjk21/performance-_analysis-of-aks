@@ -1,28 +1,18 @@
+version: '3.8'
+
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command:
-      - uvicorn
-      - main:app
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8000"
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/workspace
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    command:
-      - npm
-      - start
     ports:
       - "3000:3000"
-      - "5173:5173"
-    volumes:
-      - ./frontend:/workspace
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
