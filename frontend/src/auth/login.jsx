@@ -27,7 +27,7 @@ const Login = ({ setIsAuthenticated }) => {
         }
 
         try {
-            const response = await fetch("https://my-fastapi-app-3389.azurewebsites.net/auth/login", {
+            const response = await fetch("https://my-fastapi-app-3389.azurewebsites.net/api/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

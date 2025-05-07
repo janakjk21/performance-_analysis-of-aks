@@ -34,7 +34,7 @@ const Register = () => {
         }
 
         try {
-            const response = await fetch('https://my-fastapi-app-3389.azurewebsites.net/api/auth/register', {
+            const response = await fetch("https://my-fastapi-app-3389.azurewebsites.net/api/auth/register", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
