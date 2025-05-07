@@ -40,7 +40,7 @@ const Maindashboard = () => {
         }
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/history", {
+            const response = await fetch("https://my-fastapi-app-3389.azurewebsites.net/api/history", {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
@@ -66,7 +66,7 @@ const Maindashboard = () => {
         }
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/history", {
+            const response = await fetch("https://my-fastapi-app-3389.azurewebsites.net/api/history", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -93,7 +93,7 @@ const Maindashboard = () => {
         }
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/history/${id}`, {
+            const response = await fetch(`https://my-fastapi-app-3389.azurewebsites.net/api/history/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
