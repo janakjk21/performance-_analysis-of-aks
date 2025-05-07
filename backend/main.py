@@ -1,43 +1,28 @@
-name: Build and Deploy to Azure
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from api.routes.auth import router as auth_router
+from api.routes.history import router as history_router
 
-on:
-  push:
-    branches:
-      - main
+app = FastAPI()
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+# ✅ CORS setup – Add both local and production frontend origins
+origins = [
+    "http://localhost:5173",  # local dev
+    "https://my-fastapi-app-3389.azurewebsites.net",  # production frontend
+]
 
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    - name: Log in to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+# ✅ Register routers
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(history_router, prefix="/history", tags=["history"])
 
-    - name: Log in to Azure Container Registry (ACR)
-      run: az acr login --name ${{ secrets.ACR_NAME }}
-
-    - name: Build and Push Backend Docker Image
-      run: |
-        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest ./backend
-        docker push ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest
-
-    - name: Build and Push Frontend Docker Image
-      run: |
-        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest ./frontend
-        docker push ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest
-
-    - name: Deploy to Azure Web App
-      run: |
-        az webapp config container set \
-          --name ${{ secrets.APP_NAME }} \
-          --resource-group ${{ secrets.RESOURCE_GROUP }} \
-          --multicontainer-config-type compose \
-          --multicontainer-config-file docker-compose-azure.yml \
-          --docker-registry-server-url https://${{ secrets.ACR_NAME }}.azurecr.io \
-          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
-          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the FastAPI app!"}
