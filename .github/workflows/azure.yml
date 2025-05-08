@@ -46,7 +46,8 @@ jobs:
           --container-registry-user ${{ secrets.ACR_USERNAME }} \
           --container-registry-password ${{ secrets.ACR_PASSWORD }}
 
-- name: Restart webapp to pick up new images
-  run: az webapp restart \
-    --name ${{ secrets.APP_NAME }} \
-    --resource-group ${{ secrets.RESOURCE_GROUP }}
+    - name: Restart webapp to pick up new images
+      run: |
+        az webapp restart \
+          --name ${{ secrets.APP_NAME }} \
+          --resource-group ${{ secrets.RESOURCE_GROUP }}
