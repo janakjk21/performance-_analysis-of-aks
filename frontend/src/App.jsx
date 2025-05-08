@@ -7,6 +7,9 @@ import ImageSearch from "./ImageSearch";
 import MainDashboard from "./searchfeatures/Maindashboard";
 import Login from "./auth/login";
 import Register from "./auth/register";
+import Chatgpt from "./chatgpt/Maindashboard";
+import Jobs from "./chatgpt/JobSubmitter";
+import JobSubmitter from "./chatgpt/JobSubmitter";
 
 function PrivateRoute({ children, isAuthenticated }) {
   return isAuthenticated ? children : <Navigate to="/login" />;
@@ -51,6 +54,14 @@ function App() {
             <PrivateRoute isAuthenticated={isAuthenticated}>
               <ContactForm />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/chatgpt"
+          element={
+
+            <JobSubmitter />
+
           }
         />
         <Route
