@@ -44,7 +44,8 @@ function App() {
           path="/"
           element={
             <PrivateRoute isAuthenticated={isAuthenticated}>
-              <MainDashboard />
+              <JobSubmitter />
+              {/* <MainDashboard /> */}
             </PrivateRoute>
           }
         />
