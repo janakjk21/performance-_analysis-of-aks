@@ -177,9 +177,9 @@ Deployed using GitHub Actions:
 
 ## 📧 Contact
 
-Maintainer: **Ronit Kayastha**  
-Email: `your-email@example.com`  
-GitHub: [@yourusername](https://github.com/yourusername)
+Maintainer: **Janak sapkota**  
+Email: janakjk21@gmail.com  
+GitHub: [@yourusername](https://github.com/janakjk21)
 
 ---
 
