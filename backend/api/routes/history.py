@@ -15,11 +15,16 @@ def create_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    new_history = History(user_id=current_user.id, text=history.text)
+    new_history = History(
+        user_id=current_user.id,
+        query=history.query,
+        result=history.result
+    )
     db.add(new_history)
     db.commit()
     db.refresh(new_history)
     return {"message": "History created successfully", "history": new_history}
+
 
 # Get all history entries for the current user
 @router.get("/", status_code=status.HTTP_200_OK)
