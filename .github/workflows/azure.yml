@@ -8,55 +8,50 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      ACR_NAME: ${{ secrets.ACR_NAME }}
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
-      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-      APP_NAME: ${{ secrets.APP_NAME }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Log in to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        login-server: ${{ env.ACR_LOGIN_SERVER }}
-        username:     ${{ secrets.ACR_USERNAME }}
-        password:     ${{ secrets.ACR_PASSWORD }}
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+          username:     ${{ secrets.ACR_USERNAME }}
+          password:     ${{ secrets.ACR_PASSWORD }}
 
-    - name: Build & push frontend image
-      run: |
-        docker build \
-          -t $ACR_LOGIN_SERVER/frontend:latest \
-          ./frontend
-        docker push $ACR_LOGIN_SERVER/frontend:latest
+      - name: Build & push frontend image
+        run: |
+          docker build \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest \
+            ./frontend
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/frontend:latest
 
-    - name: Build & push backend image
-      run: |
-        docker build \
-          -t $ACR_LOGIN_SERVER/backend:latest \
-          ./backend
-        docker push $ACR_LOGIN_SERVER/backend:latest
+      - name: Build & push backend image
+        run: |
+          docker build \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest \
+            ./backend
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/backend:latest
 
-    - name: Configure Web App for multi-container
-      run: |
-        az webapp config container set \
-          --resource-group $RESOURCE_GROUP \
-          --name $APP_NAME \
-          --multicontainer-config-type compose \
-          --multicontainer-config-file docker-compose-azure.yml \
-          --container-registry-url https://$ACR_LOGIN_SERVER \
-          --container-registry-user ${{ secrets.ACR_USERNAME }} \
-          --container-registry-password ${{ secrets.ACR_PASSWORD }}
+      - name: Configure Web App for multi-container
+        run: |
+          az webapp config container set \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --name ${{ secrets.APP_NAME }} \
+            --multicontainer-config-type compose \
+            --multicontainer-config-file docker-compose-azure.yml \
+            --container-registry-url https://${{ secrets.ACR_NAME }}.azurecr.io \
+            --container-registry-user ${{ secrets.ACR_USERNAME }} \
+            --container-registry-password ${{ secrets.ACR_PASSWORD }}
 
-    - name: Restart Web App
-      run: |
-        az webapp restart \
-          --resource-group $RESOURCE_GROUP \
-          --name $APP_NAME
+      - name: Restart Web App
+        run: |
+          az webapp restart \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --name ${{ secrets.APP_NAME }}
