@@ -1,27 +1,13 @@
-# ---------- Build Stage ----------
-FROM node:20 AS builder
-
-# Set working directory
+# build stage
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Copy everything from frontend/
+COPY package*.json ./
+RUN npm ci
 COPY . .
-
-# Install dependencies and build the app
-RUN npm install
 RUN npm run build
 
-# ---------- Serve Stage ----------
-FROM nginx:alpine
-
-# Copy built files to NGINX's public folder
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy a custom NGINX config (optional but recommended)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose the port NGINX will serve from
-EXPOSE 3000
-
-# Run NGINX in foreground
-CMD ["nginx", "-g", "daemon off;"]
+# serve stage
+FROM nginx:stable-alpine
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
