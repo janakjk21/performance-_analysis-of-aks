@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backend
+  namespace: perf
+  labels:
+    release: kube-prometheus-stack     # <- must match your helm release name
+spec:
+  namespaceSelector:
+    matchNames: ["perf"]
+  selector:
+    matchLabels:
+      app: backend                     # <- must match Service's selector
+  endpoints:
+    - port: http                       # <- matches the Service port name
+      path: /metrics                   # FastAPI Instrumentator exposes here
+      interval: 15s
+      scheme: http

@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-perf
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"        # <-- picked up by the Grafana sidecar
+  annotations:
+    grafana_folder: "Perf"        # optional: puts it in a "Perf" folder
+data:
+  perf-backend.json: |-
+    {
+      "uid": "perf-backend",
+      "title": "Perf – Backend (FastAPI)",
+      "tags": ["perf","backend"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          { "name": "namespace", "type": "constant", "query": "perf", "current": { "text": "perf", "value": "perf" }},
+          { "name": "service",   "type": "constant", "query": "backend", "current": { "text": "backend", "value": "backend" }}
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "RPS (1m)",
+          "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"$namespace\",service=\"$service\"}[1m]))",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "p95 Latency (ms)",
+          "gridPos": { "x": 6, "y": 0, "w": 6, "h": 5 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) * 1000",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Requests by Status (1m rate)",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (status) (rate(http_requests_total{namespace=\"$namespace\",service=\"$service\"}[1m]))",
+              "legendFormat": "{{status}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "CPU (cores) – backend pods",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"$service-.*\",image!=\"\"}[2m]))",
+              "legendFormat": "CPU cores",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "cores" }, "overrides": [] }
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Memory (working set) – backend pods",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\",pod=~\"$service-.*\"})",
+              "legendFormat": "bytes",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Latency Quantiles (ms)",
+          "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) * 1000",
+              "legendFormat": "p50",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "histogram_quantile(0.90, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) * 1000",
+              "legendFormat": "p90",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) * 1000",
+              "legendFormat": "p99",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+        },
+        {
+          "id": 7,
+          "type": "table",
+          "title": "5xx by handler (5m rate)",
+          "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (handler) (rate(http_requests_total{namespace=\"$namespace\",service=\"$service\",status=~\"5..\"}[5m]))",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "transformations": [
+            { "id": "organize", "options": { "excludeByName": { "Time": true } } }
+          ]
+        }
+      ]
+    }

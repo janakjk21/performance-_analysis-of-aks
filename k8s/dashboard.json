@@ -1,0 +1,78 @@
+# nuke the old one (safe if it doesn't exist)
+kubectl -n monitoring delete cm grafana-dashboard-perf --ignore-not-found
+
+# create a fresh CM the sidecar will import
+kubectl apply -f - <<'YAML'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-perf
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"               # <- key label the sidecar watches
+    app.kubernetes.io/part-of: kube-prometheus-stack
+    grafana_folder: "Perf"               # <- optional folder in Grafana
+data:
+  dashboard.json: |-
+    {
+      "uid": "perf-backend",
+      "title": "Perf – Backend (FastAPI)",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "type": "query",
+            "name": "pod",
+            "label": "Pod",
+            "hide": 0,
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": "label_values(container_memory_working_set_bytes{namespace=\"perf\",pod=~\"backend-.*\"}, pod)",
+            "current": { "selected": true, "text": "All", "value": "/.*/" },
+            "includeAll": true,
+            "allValue": "/.*/"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "HTTP RPS (backend)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(rate(http_requests_total{namespace=\"perf\",service=\"backend\"}[1m]))", "legendFormat": "RPS" }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+        },
+        {
+          "type": "timeseries",
+          "title": "p95 HTTP latency (s)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"perf\",service=\"backend\"}[5m])))", "legendFormat": "p95" }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU (cores) by pod",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"perf\",pod=~\"$pod\",container!=\"\",image!=\"\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory (MiB) by pod",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(container_memory_working_set_bytes{namespace=\"perf\",pod=~\"$pod\",container!=\"\",image!=\"\"}) by (pod) / 1024 / 1024", "legendFormat": "{{pod}}" }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+        }
+      ]
+    }
+YAML
