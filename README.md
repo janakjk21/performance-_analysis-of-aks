@@ -1,189 +1,227 @@
-# AI-Powered Full-Stack FastAPI + React Web App
+Performance Analysis of AKS (Azure Kubernetes Service)
 
-This is a full-stack web application combining **FastAPI** as the backend and **React** as the frontend. It supports user registration/login, job submission to an AI model, credit tracking, and a searchable chat and image history. The application is containerized with Docker and deployed on **Azure App Service** using **GitHub Actions**.
+Empirical evaluation of microservices performance & scalability on AKS
+Steady, spike, and ramp workloads · Horizontal vs vertical scaling · HPA effectiveness · Tail latency (p95/p99) · Prometheus/Grafana + k6
 
-🔗 **Live App**: [my-fastapi-app-3389.azurewebsites.net](https://my-fastapi-app-3389.azurewebsites.net)
+✨ Overview
 
----
+This project measures how a containerised microservices app behaves on Azure Kubernetes Service (AKS) under different workloads and scaling strategies. It focuses on:
 
-## 🚀 Features
+Horizontal vs. vertical scaling impacts on throughput and latency
 
-- User authentication with JWT (Login/Register)
-- Secure history creation and retrieval
-- AI job submission and status checking
-- User credit tracking
-- Protected routes on frontend
-- React dashboard, chat, image search, and contact list features
-- Fully Dockerized and CI/CD enabled for Azure
+Autoscaling (HPA) responsiveness to spike and ramp workloads
 
----
+Tail latency (p95/p99), CPU/memory utilisation, and error rates
 
-## 🛠 Tech Stack
+Practical, reproducible test harness with k6 and Prometheus/Grafana
 
-**Frontend**
-- React
-- Bootstrap
-- React Router
+Outcome: actionable guidance on when to scale out vs scale up, and how HPA settings affect tail latency and resilience.
 
-**Backend**
-- FastAPI
-- Pydantic
-- JWT Authentication
-- PostgreSQL / SQLite
-- Docker
+🏗️ Architecture (at a glance)
 
-**DevOps**
-- Docker Compose
-- GitHub Actions
-- Azure App Service (via Azure Container Registry)
+App: simple e-commerce style microservices (gateway + catalog/order/user)
 
----
+AKS: 1+ node pools (Linux), HPA (CPU target), optional VPA (off)
 
-## 🧱 Project Structure
+Load: k6 (steady/spike/ramp)
 
-```
-📦project-root
- ┣ 📁backend
- ┃ ┣ 📄main.py
- ┃ ┣ 📁routers
- ┃ ┣ 📁models
- ┃ ┣ 📁schemas
- ┃ ┣ 📄Dockerfile
- ┣ 📁frontend
- ┃ ┣ 📄App.js
- ┃ ┣ 📁components
- ┃ ┣ 📁auth
- ┃ ┣ 📁chatgpt
- ┃ ┣ 📁searchfeatures
- ┃ ┣ 📄Dockerfile
- ┣ 📄docker-compose.yml
- ┣ 📄README.md
- ┣ 📄.github/workflows/deploy.yml
-```
+Observability: Prometheus + Grafana (or Azure Monitor), alerts optional
 
----
+[ k6 ] → [ AKS Ingress/Service ] → [ Frontend API ] → [ Catalog | Order | User ]
+                                  ↘ metrics (/metrics) → [ Prometheus ] → [ Grafana ]
 
-## ⚙️ Running Locally with Docker
+📁 Repo structure (suggested)
+.
+├─ app/                 # microservices (e.g., frontend, catalog, order, user)
+│  ├─ Dockerfile
+│  └─ k8s/              # manifests: Deployments, Services, HPA
+├─ k6/                  # load scripts: steady.js, spike.js, ramp.js, jobs.yaml
+├─ monitoring/          # Prometheus/Grafana (Helm values or manifests)
+├─ scripts/             # helper scripts (AKS create/destroy, PromQL exports)
+├─ analysis/            # notebooks or CSVs for charts/tables
+├─ docs/                # diagrams, experiment notes
+└─ README.md
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/yourproject.git
-   cd yourproject
-   ```
 
-2. **Build and start the containers**
-   ```bash
-   docker-compose up --build
-   ```
+If your layout differs, keep the same ideas and update paths below.
 
-3. **Access the app**
-   - Frontend: `http://localhost:3000`
-   - Backend: `http://localhost:8000`
+✅ Prerequisites
 
----
+Azure CLI (az), kubectl, Helm
 
-## 🧪 API Endpoints (FastAPI)
+Azure subscription with permissions to create AKS & ACR
 
-| Endpoint              | Method | Description                     |
-|----------------------|--------|---------------------------------|
-| `/auth/register`     | POST   | Register new user               |
-| `/auth/login`        | POST   | Login and get access token      |
-| `/history/`          | GET    | Get user's history              |
-| `/history/`          | POST   | Create a new history item       |
-| `/history/{id}`      | PUT    | Update a specific history item  |
-| `/history/{id}`      | DELETE | Delete a specific history item  |
-| `/jobs/submit`       | POST   | Submit a new AI job             |
-| `/jobs/{id}/status`  | GET    | Check job processing status     |
-| `/jobs/credits`      | GET    | Get remaining user credits      |
-| `/user/me`           | GET    | Get profile of authenticated user |
-| `/`                  | GET    | Root (health check)             |
+Docker (to build images)
 
----
+(Optional) k6, jq locally (if not running in-cluster jobs)
 
-## 🧪 Example Test Cases
+Sign in & set subscription:
 
-Example tests using FastAPI’s `TestClient`:
+az login
+az account set --subscription "<SUBSCRIPTION_ID_OR_NAME>"
 
-```python
-def test_create_history():
-    login_response = client.post(
-        "/auth/login",
-        json={"email": "testuser@example.com", "password": "password123"}
-    )
-    token = login_response.json()["access_token"]
-    
-    response = client.post(
-        "/history",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"text": "Test history entry"}
-    )
-    assert response.status_code == 201
-    assert response.json()["message"] == "History created successfully"
+🚀 Quick start
+1) Create AKS + ACR and connect
+# Variables
+RG=perf-rg
+LOC=westeurope
+AKS=perf-aks
+ACR=perfacr$RANDOM
 
-def test_get_history():
-    login_response = client.post(
-        "/auth/login",
-        json={"email": "testuser@example.com", "password": "password123"}
-    )
-    token = login_response.json()["access_token"]
-    
-    response = client.get(
-        "/history",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    assert response.status_code == 200
-    assert isinstance(response.json()["history"], list)
-```
+# Resource group
+az group create -n $RG -l $LOC
 
-Run tests using:
+# ACR + AKS
+az acr create -n $ACR -g $RG --sku Basic
+az aks create -n $AKS -g $RG --node-count 2 --generate-ssh-keys --attach-acr $ACR
 
-```bash
-pytest tests/
-```
+# Get credentials
+az aks get-credentials -n $AKS -g $RG
 
----
+2) Build & push images
+# Example: build service images (adjust paths/names as needed)
+docker build -t $ACR.azurecr.io/frontend:latest ./app/frontend
+docker push    $ACR.azurecr.io/frontend:latest
+# Repeat for catalog/order/user...
 
-## 🔐 Authentication (JWT)
+3) Deploy app and HPA
+# Namespace
+kubectl create ns perf || true
 
-- Tokens are stored in `localStorage` under `session_data`.
-- On each request, the token is sent via the `Authorization` header:
-  ```
-  Authorization: Bearer <access_token>
-  ```
+# App manifests (Deployments/Services)
+kubectl -n perf apply -f app/k8s/
 
----
+# Example HPA (adjust CPU target or min/max replicas)
+kubectl -n perf apply -f app/k8s/hpa.yaml
 
-## 🌐 Deployment
+4) Monitoring stack (Prometheus/Grafana)
+# Option A: Helm (kube-prometheus-stack)
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm -n monitoring install kps prometheus-community/kube-prometheus-stack \
+  --create-namespace \
+  -f monitoring/values.yaml
 
-Deployed using GitHub Actions:
+# ServiceMonitor for your backend metrics
+kubectl apply -f monitoring/servicemonitor-backend.yaml
 
-- On push to `main`, the app builds Docker images and pushes to Azure Container Registry.
-- Azure App Service pulls the latest image and redeploys the app.
 
----
+Ensure your app exposes /metrics (e.g., Prometheus FastAPI/Express instrumentator).
 
-## 📌 Frontend Routes
+5) Run workloads (k6)
 
-| Route            | Auth | Component         |
-|------------------|------|-------------------|
-| `/login`         | ❌   | Login             |
-| `/register`      | ❌   | Register          |
-| `/`              | ✅   | MainDashboard     |
-| `/create`        | ✅   | ContactForm       |
-| `/chatgpt`       | ✅   | ChatGPT Dashboard |
-| `/search-images` | ✅   | Image Search      |
+In-cluster jobs:
 
----
+# Steady load
+kubectl -n perf apply -f k6/k6-steady.job.yaml
+kubectl -n perf wait --for=condition=complete job/k6-steady --timeout=20m
+kubectl -n perf logs job/k6-steady
 
-## 📧 Contact
+# Spike load
+kubectl -n perf apply -f k6/k6-spike.job.yaml
+kubectl -n perf wait --for=condition=complete job/k6-spike --timeout=20m
+kubectl -n perf logs job/k6-spike
 
-Maintainer: **Janak sapkota**  
-Email: janakjk21@gmail.com  
-GitHub: [@yourusername](https://github.com/janakjk21)
+# Ramp load
+kubectl -n perf apply -f k6/k6-ramp.job.yaml
+kubectl -n perf wait --for=condition=complete job/k6-ramp --timeout=20m
+kubectl -n perf logs job/k6-ramp
 
----
+📊 Metrics & data export
 
-## ✅ License
+Example PromQL → TSV exporters (edit labels/namespaces to match yours):
 
-This project is licensed under the MIT License.
+# p95 latency (ms)
+curl -sG "$PROM/api/v1/query_range" \
+  --data-urlencode 'query=histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace="perf",service="backend"}[5m]))) * 1000' \
+  --data-urlencode "start=$START" --data-urlencode "end=$END" --data-urlencode "step=$STEP" \
+| jq -r '.data.result[0]?.values[]? | @tsv' > analysis/steady_p95_ms.tsv
 
+# Throughput (RPS)
+curl -sG "$PROM/api/v1/query_range" \
+  --data-urlencode 'query=sum(rate(http_requests_total{namespace="perf"}[1m]))' \
+  --data-urlencode "start=$START" --data-urlencode "end=$END" --data-urlencode "step=$STEP" \
+| jq -r '.data.result[0]?.values[]? | @tsv' > analysis/steady_rps.tsv
+
+# CPU cores (sum over backend pods)
+curl -sG "$PROM/api/v1/query_range" \
+  --data-urlencode 'query=sum(rate(container_cpu_usage_seconds_total{namespace="perf",pod=~"backend-.*",image!=""}[2m]))' \
+  --data-urlencode "start=$START" --data-urlencode "end=$END" --data-urlencode "step=$STEP" \
+| jq -r '.data.result[0]?.values[]? | @tsv' > analysis/steady_cpu.tsv
+
+
+Add similar scripts for spike and ramp runs. Plot in your favourite tool or analysis/ notebook.
+
+🧪 Experiments
+
+Steady: baseline at fixed RPS; measure mean/p95 latency, CPU/mem, errors
+
+Horizontal scaling: replicas = 1→N; observe linearity and tail latency
+
+Vertical scaling: increase pod CPU/mem limits; compare gains vs replicas
+
+Spike: sudden 5–10× burst; compare HPA on vs HPA off
+
+Ramp: gradual RPS increase; verify smooth scaling without SLO breach
+
+Record:
+
+Mean & p95/p99 latency, throughput, error rate
+
+Pod/Node CPU/memory, HPA target vs actual, scale events timing
+
+Any throttling (container CPU throttled seconds), OOMs, restarts
+
+📈 Grafana panels (suggested PromQL)
+
+RPS: sum(rate(http_requests_total{namespace="perf"}[1m]))
+
+p95 latency: histogram_quantile(0.95, sum by (le)(rate(http_request_duration_seconds_bucket{namespace="perf"}[5m])))
+
+CPU (cores): sum(rate(container_cpu_usage_seconds_total{namespace="perf",container!="",image!=""}[2m]))
+
+Memory (MiB): sum(container_memory_working_set_bytes{namespace="perf",container!="",image!=""}) / 1024^2
+
+HPA target vs actual: panel of kube_hpa_target_metric (or Azure Monitor equivalents)
+
+⚙️ Configuration tips
+
+HPA: start with targetCPUUtilizationPercentage: 50, min=1, max=5–10
+
+Resources: set conservative requests/limits; avoid throttling
+
+Ingress/Service: ensure proper timeouts to avoid masking app latency
+
+Node size: choose VM SKU that matches test scale; keep noise predictable
+
+🧹 Cleanup
+kubectl delete ns perf monitoring --ignore-not-found
+az group delete -n $RG --yes --no-wait
+
+🔍 Results (typical findings to validate)
+
+Scaling out > up for throughput at moderate loads
+
+HPA mitigates spike-induced tail latency after warm-up (~tens of seconds)
+
+Vertical scaling has diminishing returns unless single pod is CPU-bound
+
+(Replace with your measured numbers & charts in the repo’s analysis/ folder.)
+
+📜 License
+
+MIT (or your chosen license). Add a LICENSE file.
+
+🙏 Acknowledgements
+
+Azure AKS & Kubernetes community
+
+Prometheus/Grafana, k6 contributors
+
+University supervision & feedback
+
+📬 How to cite
+
+If you use this in academic work, please cite your dissertation/report and this repo.
+
+Sapkota, J. (2025). Performance Analysis of AKS: Microservices Scalability under Realistic Workloads. MSc Dissertation, University of Lincoln.
