@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-ramp
+  namespace: perf
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        args: ["run","/scripts/ramp.js"]
+        env:
+        - name: TARGET
+          value: "http://backend.perf.svc.cluster.local:8000"
+        - name: START_RATE
+          value: "2"
+        - name: RATE_STAGES
+          value: '[{"duration":"2m","target":10},{"duration":"2m","target":30},{"duration":"2m","target":60}]'
+        - name: VUS
+          value: "30"
+        - name: MAX_VUS
+          value: "300"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: k6-scripts
+          items: [{ key: ramp.js, path: ramp.js }]

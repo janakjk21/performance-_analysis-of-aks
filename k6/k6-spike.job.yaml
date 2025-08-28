@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-spike
+  namespace: perf
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        args: ["run","/scripts/spike.js"]
+        env:
+        - name: TARGET
+          value: "http://backend.perf.svc.cluster.local:8000"
+        - name: WARM_RATE
+          value: "2"
+        - name: SPIKE_RATE
+          value: "100"      # crank this to trigger HPA later
+        - name: COOL_RATE
+          value: "2"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: k6-scripts
+          items: [{ key: spike.js, path: spike.js }]

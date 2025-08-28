@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-steady
+  namespace: perf
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        args: ["run","/scripts/steady.js"]
+        env:
+        - name: TARGET
+          value: "http://backend.perf.svc.cluster.local:8000"
+        - name: RATE
+          value: "10"        # RPS
+        - name: DURATION
+          value: "5m"
+        - name: VUS
+          value: "20"
+        - name: MAX_VUS
+          value: "200"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: k6-scripts
+          items: [{ key: steady.js, path: steady.js }]
